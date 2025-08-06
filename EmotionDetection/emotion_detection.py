@@ -1,36 +1,34 @@
-import requests
-import json
+# EmotionDetection/emotion_detection.py
+import joblib
+import os
 
-def emotion_detector(text_to_analyze):
+# Load your trained pipeline once
+model_path = os.path.join(os.path.dirname(__file__), "rf_emotion_model.pkl")
+model = joblib.load(model_path)
+
+def emotion_detector(text):
     try:
-        URL = 'https://sn-watson-emotion.labs.skills.network/v1/watson.runtime.nlp.v1/NlpService/EmotionPredict'
-        HEADERS = {"grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_stock"}
-        obj = { "raw_document": { "text": text_to_analyze } }
+        # Predict emotion probabilities
+        probs = model.predict_proba([text])[0]
+        classes = model.classes_
 
-        response = requests.post(URL, headers=HEADERS, json=obj)
-        data = json.loads(response.text)
-        emo_scores = data['emotionPredictions'][0]['emotion']
+        # Format into Watson-style response
+        scores = {cls: round(prob, 2) for cls, prob in zip(classes, probs)}
 
-        # 🏆 Find the dominant vibe
-        dominant_emotion = max(emo_scores, key=emo_scores.get)
+        # Fill in missing Watson emotions
+        all_emotions = ['anger', 'disgust', 'fear', 'joy', 'sadness', 'surprise', 'love']
+        result = {emotion: scores.get(emotion, 0.0) for emotion in all_emotions}
 
-        # 🎁 Assemble the final dictionary
-        result = {
-            'anger':   emo_scores['anger'],
-            'disgust': emo_scores['disgust'],
-            'fear':    emo_scores['fear'],
-            'joy':     emo_scores['joy'],
-            'sadness': emo_scores['sadness'],
-            'dominant_emotion': dominant_emotion
-        }
+        # Determine dominant emotion
+        dominant = max(result, key=result.get)
+        result['dominant_emotion'] = dominant
+
         return result
+
     except Exception as e:
-        print("Exception occurred", e)
+        print("Emotion detection error:", e)
         return {
-            'anger':   0,
-            'disgust': 0,
-            'fear':    0,
-            'joy':     0,
-            'sadness': 0,
-            'dominant_emotion': 0
+            'anger': 0, 'disgust': 0, 'fear': 0,
+            'joy': 0, 'sadness': 0, 'surprise': 0,
+            'love': 0, 'dominant_emotion': None
         }
