@@ -22,9 +22,6 @@ def emotion_detector_route():
 
 @app.route("/")
 def render_index_page():
-    """
-    Render the main index page (HTML interface).
-    """
     return render_template('index.html')
 
 if __name__ == "__main__":
